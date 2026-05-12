@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo,useEffect, useState } from "react";
 import {
   FlatList,
   ImageBackground,
@@ -16,22 +16,21 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function Index() {
-  const systemTheme = useColorScheme();
+ 
   const { width, height } = useWindowDimensions();
 
   const isLandscape = width > height;
   const isTablet = width >= 768;
 
-  const [manualTheme, setManualTheme] = useState(null);
-
-  const isDarkMode =
-    manualTheme !== null
-      ? manualTheme
-      : systemTheme === "dark";
+  const colorScheme = useColorScheme();
+  
 
   const [searchQuery, setSearchQuery] = useState("");
 
   const [selectedNote, setSelectedNote] = useState(null);
+  const [isDarkMode, setIsDarkMode] = useState(
+  colorScheme === "dark"
+);
 
   const [notes, setNotes] = useState([
     {
@@ -56,6 +55,9 @@ export default function Index() {
 
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
+  useEffect(() => {
+  setIsDarkMode(colorScheme === "dark");
+}, [colorScheme]);
 
   const theme = useMemo(() => {
     return isDarkMode
@@ -93,7 +95,7 @@ export default function Index() {
 
   const saveNote = () => {
     const updatedNotes = notes.map((note) =>
-      note.id === selectedNote.id
+      note.id === selectedNote?.id
         ? {
             ...note,
             title,
@@ -224,11 +226,10 @@ export default function Index() {
         </Text>
 
         <Switch
-          value={isDarkMode}
-          onValueChange={(value) =>
-            setManualTheme(value)
-          }
-        />
+  value={isDarkMode}
+  onValueChange={setIsDarkMode}
+/>
+        
       </View>
 
       <TextInput
@@ -248,6 +249,7 @@ export default function Index() {
 
       <FlatList
         data={filteredNotes}
+          key={isTablet || isLandscape ? "grid" : "list"}
         keyExtractor={(item) => item.id.toString()}
         numColumns={
           isTablet || isLandscape ? 2 : 1
