@@ -1,6 +1,9 @@
 import { useMemo, useState } from "react";
 import {
   FlatList,
+  ImageBackground,
+  KeyboardAvoidingView,
+  Platform,
   Pressable,
   StyleSheet,
   Switch,
@@ -14,15 +17,23 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function Index() {
   const systemTheme = useColorScheme();
-  const { width } = useWindowDimensions();
+  const { width, height } = useWindowDimensions();
+
+  const isLandscape = width > height;
+  const isTablet = width >= 768;
+
+  const [manualTheme, setManualTheme] = useState(null);
+
+  const isDarkMode =
+    manualTheme !== null
+      ? manualTheme
+      : systemTheme === "dark";
 
   const [searchQuery, setSearchQuery] = useState("");
-  const [isDarkMode, setIsDarkMode] = useState(systemTheme === "dark");
-  
 
-  const isTablet = width > 700;
+  const [selectedNote, setSelectedNote] = useState(null);
 
-  const notes = [
+  const [notes, setNotes] = useState([
     {
       id: 1,
       title: "First Chapter",
@@ -41,43 +52,159 @@ export default function Index() {
       content: "Creating REST APIs using Express and MongoDB.",
       date: "10 May 2026, 06:45 PM",
     },
-    {
-      id: 4,
-      title: "Database Design",
-      content: "Learned schema relationships and indexing concepts.",
-      date: "09 May 2026, 02:20 PM",
-    },
-    {
-      id: 5,
-      title: "Deployment Notes",
-      content: "Steps to deploy frontend and backend using Docker.",
-      date: "08 May 2026, 11:00 AM",
-    },
-  ];
+  ]);
 
-  const filteredNotes = notes.filter((note) =>
-    note.title.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const [title, setTitle] = useState("");
+  const [content, setContent] = useState("");
 
   const theme = useMemo(() => {
     return isDarkMode
       ? {
-          background: "#121212",
-          card: "#1E1E1E",
+          background: "#101010",
+          card: "#1D1D1D",
           text: "#FFFFFF",
-          subText: "#AFAFAF",
+          subText: "#AAAAAA",
           input: "#2A2A2A",
           border: "#333",
+          button: "#3B82F6",
         }
       : {
           background: "#F4F4F4",
           card: "#FFFFFF",
-          text: "#1A1A1A",
+          text: "#181818",
           subText: "#666",
           input: "#FFFFFF",
           border: "#DDD",
+          button: "#2563EB",
         };
   }, [isDarkMode]);
+
+  const filteredNotes = notes.filter((note) =>
+    note.title
+      .toLowerCase()
+      .includes(searchQuery.toLowerCase())
+  );
+
+  const openEditScreen = (note) => {
+    setSelectedNote(note);
+    setTitle(note.title);
+    setContent(note.content);
+  };
+
+  const saveNote = () => {
+    const updatedNotes = notes.map((note) =>
+      note.id === selectedNote.id
+        ? {
+            ...note,
+            title,
+            content,
+          }
+        : note
+    );
+
+    setNotes(updatedNotes);
+    setSelectedNote(null);
+  };
+
+  if (selectedNote) {
+    return (
+      <SafeAreaView
+        style={[
+          styles.container,
+          { backgroundColor: theme.background },
+        ]}
+      >
+        <KeyboardAvoidingView
+          behavior={
+            Platform.OS === "ios"
+              ? "padding"
+              : "height"
+          }
+          style={{ flex: 1 }}
+        >
+          <ImageBackground
+            source={{
+              uri: "https://images.unsplash.com/photo-1517842645767-c639042777db",
+            }}
+            style={styles.imageHeader}
+            imageStyle={styles.imageStyle}
+          >
+            <View style={styles.overlay}>
+              <Text style={styles.headerTitle}>
+                Edit Note
+              </Text>
+            </View>
+          </ImageBackground>
+
+          <View style={styles.formContainer}>
+            <TextInput
+              value={title}
+              onChangeText={setTitle}
+              placeholder="Note title"
+              placeholderTextColor={theme.subText}
+              style={[
+                styles.input,
+                {
+                  backgroundColor: theme.input,
+                  color: theme.text,
+                  borderColor: theme.border,
+                },
+              ]}
+            />
+
+            <TextInput
+              value={content}
+              onChangeText={setContent}
+              placeholder="Write something..."
+              placeholderTextColor={theme.subText}
+              multiline
+              textAlignVertical="top"
+              style={[
+                styles.textArea,
+                {
+                  backgroundColor: theme.input,
+                  color: theme.text,
+                  borderColor: theme.border,
+                },
+              ]}
+            />
+
+            <View style={styles.buttonRow}>
+              <Pressable
+                style={({ pressed }) => [
+                  styles.actionButton,
+                  {
+                    backgroundColor: "#777",
+                    opacity: pressed ? 0.8 : 1,
+                  },
+                ]}
+                onPress={() => setSelectedNote(null)}
+              >
+                <Text style={styles.buttonText}>
+                  Back
+                </Text>
+              </Pressable>
+
+              <Pressable
+                style={({ pressed }) => [
+                  styles.actionButton,
+                  {
+                    backgroundColor: theme.button,
+                    opacity: pressed ? 0.8 : 1,
+                  },
+                ]}
+                onPress={saveNote}
+              >
+                <Text style={styles.buttonText}>
+                  Save
+                </Text>
+              </Pressable>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView
@@ -86,27 +213,29 @@ export default function Index() {
         { backgroundColor: theme.background },
       ]}
     >
-      <View style={styles.header}>
+      <View style={styles.topBar}>
         <Text
           style={[
             styles.heading,
             { color: theme.text },
           ]}
         >
-          Notes
+          My Notes
         </Text>
 
         <Switch
           value={isDarkMode}
-          onValueChange={setIsDarkMode}
+          onValueChange={(value) =>
+            setManualTheme(value)
+          }
         />
       </View>
 
       <TextInput
-        placeholder="Search notes..."
-        placeholderTextColor={theme.subText}
         value={searchQuery}
         onChangeText={setSearchQuery}
+        placeholder="Search notes..."
+        placeholderTextColor={theme.subText}
         style={[
           styles.searchInput,
           {
@@ -120,23 +249,28 @@ export default function Index() {
       <FlatList
         data={filteredNotes}
         keyExtractor={(item) => item.id.toString()}
-        numColumns={isTablet ? 2 : 1}
-        columnWrapperStyle={
-          isTablet ? styles.row : undefined
+        numColumns={
+          isTablet || isLandscape ? 2 : 1
         }
-        contentContainerStyle={styles.listContainer}
-        showsVerticalScrollIndicator={false}
+        columnWrapperStyle={
+          isTablet || isLandscape
+            ? styles.row
+            : undefined
+        }
         renderItem={({ item, index }) => {
-          const dynamicCard = StyleSheet.flatten([
+          const cardStyle = StyleSheet.flatten([
             styles.noteCard,
             {
               backgroundColor: theme.card,
-              width: isTablet ? "48%" : "100%",
+              width:
+                isTablet || isLandscape
+                  ? "48%"
+                  : "100%",
             },
           ]);
 
-          const alternateStyle = StyleSheet.compose(
-            dynamicCard,
+          const finalCard = StyleSheet.compose(
+            cardStyle,
             index % 2 === 0
               ? styles.leftCard
               : styles.rightCard
@@ -145,34 +279,30 @@ export default function Index() {
           return (
             <Pressable
               style={({ pressed }) => [
-                alternateStyle,
+                finalCard,
                 pressed && styles.pressedCard,
               ]}
               onPress={() =>
-                alert(
-                  `${item.title}\n\n${item.content}\n\n${item.date}`
-                )
+                openEditScreen(item)
               }
             >
-              <View style={styles.cardTop}>
-                <Text
-                  style={[
-                    styles.noteTitle,
-                    { color: theme.text },
-                  ]}
-                >
-                  {item.title}
-                </Text>
+              <Text
+                style={[
+                  styles.noteTitle,
+                  { color: theme.text },
+                ]}
+              >
+                {item.title}
+              </Text>
 
-                <Text
-                  style={[
-                    styles.noteDate,
-                    { color: theme.subText },
-                  ]}
-                >
-                  {item.date}
-                </Text>
-              </View>
+              <Text
+                style={[
+                  styles.noteDate,
+                  { color: theme.subText },
+                ]}
+              >
+                {item.date}
+              </Text>
 
               <Text
                 numberOfLines={2}
@@ -198,10 +328,10 @@ const styles = StyleSheet.create({
     paddingTop: 10,
   },
 
-  header: {
+  topBar: {
     flexDirection: "row",
-    alignItems: "center",
     justifyContent: "space-between",
+    alignItems: "center",
     marginBottom: 18,
   },
 
@@ -217,10 +347,6 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     fontSize: 16,
     marginBottom: 18,
-  },
-
-  listContainer: {
-    paddingBottom: 30,
   },
 
   row: {
@@ -242,33 +368,93 @@ const styles = StyleSheet.create({
   },
 
   leftCard: {
-    transform: [{ rotate: "-0.5deg" }],
+    transform: [{ rotate: "-0.4deg" }],
   },
 
   rightCard: {
-    transform: [{ rotate: "0.5deg" }],
+    transform: [{ rotate: "0.4deg" }],
   },
 
   pressedCard: {
     opacity: 0.85,
   },
 
-  cardTop: {
-    marginBottom: 10,
-  },
-
   noteTitle: {
     fontSize: 18,
-    fontWeight: "600",
-    marginBottom: 5,
+    fontWeight: "700",
+    marginBottom: 6,
   },
 
   noteDate: {
     fontSize: 12,
+    marginBottom: 10,
   },
 
   noteContent: {
     fontSize: 15,
     lineHeight: 22,
+  },
+
+  imageHeader: {
+    height: 180,
+    justifyContent: "flex-end",
+  },
+
+  imageStyle: {
+    borderRadius: 20,
+  },
+
+  overlay: {
+    backgroundColor: "rgba(0,0,0,0.35)",
+    padding: 20,
+    borderRadius: 20,
+  },
+
+  headerTitle: {
+    color: "#FFF",
+    fontSize: 28,
+    fontWeight: "700",
+  },
+
+  formContainer: {
+    flex: 1,
+    marginTop: 20,
+  },
+
+  input: {
+    borderWidth: 1,
+    borderRadius: 14,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    fontSize: 16,
+    marginBottom: 18,
+  },
+
+  textArea: {
+    borderWidth: 1,
+    borderRadius: 16,
+    padding: 16,
+    fontSize: 16,
+    minHeight: 220,
+  },
+
+  buttonRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginTop: 24,
+  },
+
+  actionButton: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 14,
+    alignItems: "center",
+    marginHorizontal: 5,
+  },
+
+  buttonText: {
+    color: "#FFF",
+    fontSize: 16,
+    fontWeight: "600",
   },
 });
